@@ -1,442 +1,390 @@
 import streamlit as st
-import pandas as pd
 import requests
-import time
-import numpy as np
+import pandas as pd
 from datetime import datetime
-from auth import login
-from config import APP_NAME, MARKETS
+import time
+
+# =====================================================
+# API KEY
+# =====================================================
+
+API_KEY = "97e8ab17948f4772a17cb7dd4f8a6471"
+
+# =====================================================
+# PAGE CONFIG
+# =====================================================
 
 st.set_page_config(
-    page_title=APP_NAME,
+    page_title="AI MAJIQ CLOUD PRO",
     page_icon="📈",
     layout="wide"
 )
 
-login()
+# =====================================================
+# CSS
+# =====================================================
 
-TWELVEDATA_API_KEY = "97e8ab17948f4772a17cb7dd4f8a6471"
+st.markdown("""
+<style>
 
-if "history" not in st.session_state:
-    st.session_state.history = []
+.stApp{
+    background: linear-gradient(135deg,#020617,#07111f,#020617);
+    color:white;
+}
 
-if "bot_running" not in st.session_state:
-    st.session_state.bot_running = True
+.title{
+    font-size:55px;
+    font-weight:bold;
+    color:#72ffb6;
+}
 
-if "price_history" not in st.session_state:
-    st.session_state.price_history = {
-        market: [100.0] for market in MARKETS
-    }
+.card{
+    background:rgba(255,255,255,0.05);
+    border-radius:20px;
+    padding:20px;
+    margin-bottom:20px;
+    border:1px solid rgba(255,255,255,0.08);
+}
 
-# ---------------- SIDEBAR ---------------- #
+.buy{
+    color:#00ff99;
+    font-size:28px;
+    font-weight:bold;
+}
 
-st.sidebar.title("📊 SLIMMY SIGNALS")
+.sell{
+    color:#ff4d4d;
+    font-size:28px;
+    font-weight:bold;
+}
 
-selected_market = st.sidebar.selectbox(
-    "Market",
-    MARKETS
-)
+.neutral{
+    color:orange;
+    font-size:28px;
+    font-weight:bold;
+}
 
-timeframe = st.sidebar.selectbox(
-    "Signal Timeframe",
-    [
-        "1min",
-        "5min",
-        "10min",
-        "30min",
-        "1h"
-    ]
-)
+</style>
+""", unsafe_allow_html=True)
 
-refresh_rate = st.sidebar.slider(
-    "Refresh Seconds",
-    10,
-    60,
-    30
-)
+# =====================================================
+# LOGIN
+# =====================================================
 
-colA, colB = st.sidebar.columns(2)
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-with colA:
-    if st.button("▶ Start"):
-        st.session_state.bot_running = True
+def login_page():
 
-with colB:
-    if st.button("⏹ Stop"):
-        st.session_state.bot_running = False
+    st.markdown(
+        '<p class="title">AI MAJIQ CLOUD PRO</p>',
+        unsafe_allow_html=True
+    )
 
-# ---------------- DATA ---------------- #
+    st.subheader("Professional AI Trading Scanner")
 
-@st.cache_data(ttl=20)
-def fetch_market_data(symbol, tf):
+    user = st.text_input("Username")
 
-    base = "https://api.twelvedata.com"
+    password = st.text_input(
+        "Password",
+        type="password"
+    )
+
+    if st.button("LOGIN"):
+
+        if user and password:
+
+            st.session_state.logged_in = True
+
+            st.rerun()
+
+        else:
+
+            st.error("Enter username and password")
+
+# =====================================================
+# MARKETS
+# =====================================================
+
+markets = {
+
+    "EUR/USD": "EUR/USD",
+    "GBP/USD": "GBP/USD",
+    "USD/JPY": "USD/JPY",
+    "AUD/USD": "AUD/USD",
+    "XAU/USD": "XAU/USD",
+    "BTC/USD": "BTC/USD",
+    "ETH/USD": "ETH/USD"
+}
+
+# =====================================================
+# RSI
+# =====================================================
+
+def calculate_rsi(close, period=14):
+
+    delta = close.diff()
+
+    gain = delta.clip(lower=0)
+
+    loss = -1 * delta.clip(upper=0)
+
+    avg_gain = gain.rolling(period).mean()
+
+    avg_loss = loss.rolling(period).mean()
+
+    rs = avg_gain / avg_loss
+
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+# =====================================================
+# MACD
+# =====================================================
+
+def calculate_macd(close):
+
+    ema12 = close.ewm(span=12).mean()
+
+    ema26 = close.ewm(span=26).mean()
+
+    macd = ema12 - ema26
+
+    signal = macd.ewm(span=9).mean()
+
+    return macd, signal
+
+# =====================================================
+# FETCH DATA
+# =====================================================
+
+def get_market_data(symbol, interval):
 
     try:
 
-        price = requests.get(
-            f"{base}/price?symbol={symbol}&apikey={TWELVEDATA_API_KEY}",
-            timeout=10
-        ).json()
-
-        current_price = float(
-            price.get(
-                "price",
-                st.session_state.price_history[symbol][-1]
-            )
+        url = (
+            f"https://api.twelvedata.com/time_series?"
+            f"symbol={symbol}"
+            f"&interval={interval}"
+            f"&outputsize=100"
+            f"&apikey={API_KEY}"
         )
 
-        rsi = requests.get(
-            f"{base}/rsi?symbol={symbol}&interval={tf}&time_period=14&apikey={TWELVEDATA_API_KEY}",
-            timeout=10
-        ).json()
+        response = requests.get(url)
 
-        rsi_val = float(
-            rsi["values"][0]["rsi"]
-        ) if "values" in rsi else 50
+        data = response.json()
 
-        macd = requests.get(
-            f"{base}/macd?symbol={symbol}&interval={tf}&apikey={TWELVEDATA_API_KEY}",
-            timeout=10
-        ).json()
+        if "values" not in data:
+            return None
 
-        macd_state = "NEUTRAL"
+        df = pd.DataFrame(data["values"])
 
-        if "values" in macd:
+        df = df.iloc[::-1]
 
-            m = float(
-                macd["values"][0]["macd"]
-            )
+        df["close"] = df["close"].astype(float)
 
-            s = float(
-                macd["values"][0]["macd_signal"]
-            )
+        return df
 
-            macd_state = (
-                "BULLISH"
-                if m > s
-                else "BEARISH"
-            )
+    except:
+        return None
 
-        adx = requests.get(
-            f"{base}/adx?symbol={symbol}&interval={tf}&apikey={TWELVEDATA_API_KEY}",
-            timeout=10
-        ).json()
+# =====================================================
+# SIGNAL ENGINE
+# =====================================================
 
-        adx_val = float(
-            adx["values"][0]["adx"]
-        ) if "values" in adx else 20
+def scan_market(symbol, interval):
 
-        atr = requests.get(
-            f"{base}/atr?symbol={symbol}&interval={tf}&apikey={TWELVEDATA_API_KEY}",
-            timeout=10
-        ).json()
+    df = get_market_data(symbol, interval)
 
-        atr_val = float(
-            atr["values"][0]["atr"]
-        ) if "values" in atr else 0
+    if df is None:
+        return None
 
-        ts = requests.get(
-            f"{base}/time_series?symbol={symbol}&interval={tf}&outputsize=20&apikey={TWELVEDATA_API_KEY}",
-            timeout=10
-        ).json()
+    close = df["close"]
 
-        volume_ok = True
+    current_price = close.iloc[-1]
 
-        if "values" in ts:
+    # EMA
 
-            vols = [
-                float(v.get("volume",0))
-                for v in ts["values"]
-                if "volume" in v
-            ]
+    ema20 = close.ewm(span=20).mean().iloc[-1]
 
-            if len(vols) > 5:
+    ema50 = close.ewm(span=50).mean().iloc[-1]
 
-                volume_ok = (
-                    vols[0] >= np.mean(vols)
-                )
+    # RSI
 
-        return (
-            current_price,
-            rsi_val,
-            macd_state,
-            adx_val,
-            atr_val,
-            volume_ok
-        )
+    rsi = calculate_rsi(close).iloc[-1]
 
-    except Exception as e:
+    # MACD
 
-        st.warning(
-            f"API Error: {e}"
-        )
+    macd, macd_signal = calculate_macd(close)
 
-        return (
-            st.session_state.price_history[symbol][-1],
-            50,
-            "NEUTRAL",
-            20,
-            0,
-            True
-        )
+    macd_value = macd.iloc[-1]
 
-# ---------------- STRATEGY ---------------- #
+    macd_signal_value = macd_signal.iloc[-1]
 
-def evaluate_strategy(
-    prices,
-    rsi,
-    macd,
-    adx,
-    atr,
-    volume_ok
-):
-
-    if len(prices) < 20:
-
-        return "HOLD",50,55
-
-    fast = np.mean(
-        prices[-5:]
-    )
-
-    slow = np.mean(
-        prices[-20:]
-    )
+    # SCORE
 
     score = 0
 
-    if fast > slow:
-        score += 25
+    if ema20 > ema50:
+        score += 1
     else:
-        score -= 25
+        score -= 1
 
-    if macd == "BULLISH":
-        score += 20
+    if rsi > 55:
+        score += 1
 
-    if macd == "BEARISH":
-        score -= 20
+    elif rsi < 45:
+        score -= 1
 
-    if 35 < rsi < 65:
-        score += 15
+    if macd_value > macd_signal_value:
+        score += 1
+    else:
+        score -= 1
 
-    if adx > 25:
-        score += 20
+    # SIGNAL
 
-    if atr > 0:
-        score += 10
+    if score >= 2:
+        signal = "BUY"
 
-    if volume_ok:
-        score += 10
+    elif score <= -2:
+        signal = "SELL"
 
-    if adx < 20:
-        return "HOLD",45,55
+    else:
+        signal = "NEUTRAL"
 
-    confidence = min(
-        abs(score),
-        95
+    confidence = abs(score) * 33
+
+    # TP / SL
+
+    if signal == "BUY":
+
+        tp = round(current_price * 1.01, 4)
+
+        sl = round(current_price * 0.995, 4)
+
+    elif signal == "SELL":
+
+        tp = round(current_price * 0.99, 4)
+
+        sl = round(current_price * 1.005, 4)
+
+    else:
+
+        tp = current_price
+        sl = current_price
+
+    return {
+
+        "price": round(current_price, 4),
+        "signal": signal,
+        "confidence": confidence,
+        "ema20": round(ema20, 4),
+        "ema50": round(ema50, 4),
+        "rsi": round(rsi, 2),
+        "macd": round(macd_value, 4),
+        "tp": tp,
+        "sl": sl
+    }
+
+# =====================================================
+# DASHBOARD
+# =====================================================
+
+def dashboard():
+
+    st.markdown(
+        '<p class="title">LIVE AI SIGNAL SCANNER</p>',
+        unsafe_allow_html=True
     )
 
-    accuracy = min(
-        55 + int(confidence/2),
-        75
+    st.success("20+ UPGRADES ACTIVE")
+
+    timeframe = st.selectbox(
+        "Select Timeframe",
+        ["5min", "15min", "30min", "1h", "4h", "1day"]
     )
 
-    if score >= 60:
-        return "BUY",confidence,accuracy
+    auto_refresh = st.checkbox("Auto Refresh")
 
-    elif score <= -40:
-        return "SELL",confidence,accuracy
+    if auto_refresh:
 
-    return "HOLD",confidence,accuracy
+        time.sleep(30)
 
-# ---------------- EXECUTION ---------------- #
+        st.rerun()
 
-(
-price,
-rsi,
-macd,
-adx,
-atr,
-volume_ok
-) = fetch_market_data(
-    selected_market,
-    timeframe
-)
+    if st.button("SCAN LIVE MARKET"):
 
-if st.session_state.bot_running:
+        total = 0
 
-    st.session_state.price_history[
-        selected_market
-    ].append(price)
+        for pair, symbol in markets.items():
 
-    if len(
-        st.session_state.price_history[
-            selected_market
-        ]
-    ) > 200:
+            result = scan_market(
+                symbol,
+                timeframe
+            )
 
-        st.session_state.price_history[
-            selected_market
-        ].pop(0)
+            if result:
 
-signal, confidence, accuracy = evaluate_strategy(
-    st.session_state.price_history[
-        selected_market
-    ],
-    rsi,
-    macd,
-    adx,
-    atr,
-    volume_ok
-)
+                total += 1
 
-# ---------------- TP SL ---------------- #
+                if result["signal"] == "BUY":
+                    cls = "buy"
 
-risk = 1.5
+                elif result["signal"] == "SELL":
+                    cls = "sell"
 
-if signal == "BUY":
+                else:
+                    cls = "neutral"
 
-    sl = round(
-        price - atr,
-        2
-    )
+                st.markdown(f"""
 
-    tp = round(
-        price + atr*risk,
-        2
-    )
+                <div class="card">
 
-elif signal == "SELL":
+                <h2>{pair}</h2>
 
-    sl = round(
-        price + atr,
-        2
-    )
+                <p class="{cls}">
+                {result["signal"]}
+                </p>
 
-    tp = round(
-        price - atr*risk,
-        2
-    )
+                <b>Live Entry:</b>
+                {result["price"]}<br><br>
 
+                <b>RSI:</b>
+                {result["rsi"]}<br>
+
+                <b>EMA20:</b>
+                {result["ema20"]}<br>
+
+                <b>EMA50:</b>
+                {result["ema50"]}<br>
+
+                <b>MACD:</b>
+                {result["macd"]}<br>
+
+                <b>Confidence:</b>
+                {result["confidence"]}%<br>
+
+                <b>Take Profit:</b>
+                {result["tp"]}<br>
+
+                <b>Stop Loss:</b>
+                {result["sl"]}<br>
+
+                <b>Updated:</b>
+                {datetime.now().strftime("%H:%M:%S")}
+
+                </div>
+
+                """, unsafe_allow_html=True)
+
+        st.success(f"{total} LIVE SIGNALS GENERATED")
+
+# =====================================================
+# ROUTER
+# =====================================================
+
+if st.session_state.logged_in:
+    dashboard()
 else:
-
-    sl = "-"
-    tp = "-"
-
-# ---------------- UI ---------------- #
-
-st.title(APP_NAME)
-
-c1,c2,c3 = st.columns(3)
-
-with c1:
-    st.metric(
-        "Price",
-        round(price,2)
-    )
-
-with c2:
-    st.metric(
-        "Signal",
-        signal
-    )
-
-with c3:
-    st.metric(
-        "Confidence",
-        f"{confidence}%"
-    )
-
-d1,d2,d3 = st.columns(3)
-
-with d1:
-    st.metric(
-        "RSI",
-        round(rsi,2)
-    )
-
-with d2:
-    st.metric(
-        "ADX",
-        round(adx,2)
-    )
-
-with d3:
-    st.metric(
-        "ATR",
-        round(atr,2)
-    )
-
-st.success(f"""
-
-Signal: {signal}
-
-Entry: {price}
-
-Take Profit: {tp}
-
-Stop Loss: {sl}
-
-Timeframe: {timeframe}
-
-Estimated Accuracy: {accuracy}%
-
-""")
-
-st.caption(
-    f"Updated {datetime.now().strftime('%H:%M:%S')}"
-)
-
-chart = pd.DataFrame({
-    "Price":
-    st.session_state.price_history[
-        selected_market
-    ]
-})
-
-st.line_chart(
-    chart,
-    use_container_width=True
-)
-
-if st.button(
-    "Save Signal"
-):
-
-    st.session_state.history.append({
-
-        "time":
-        datetime.now(),
-
-        "market":
-        selected_market,
-
-        "signal":
-        signal,
-
-        "tp":
-        tp,
-
-        "sl":
-        sl,
-
-        "confidence":
-        confidence
-    })
-
-if st.session_state.history:
-
-    st.dataframe(
-        pd.DataFrame(
-            st.session_state.history
-        )
-    )
-
-if st.session_state.bot_running:
-
-    time.sleep(
-        refresh_rate
-    )
-
-    st.rerun()
+    login_page()
