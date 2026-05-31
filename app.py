@@ -1,4 +1,7 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime
+
 from scanner import generate_signal
 from auth import login
 from config import APP_NAME, MARKETS
@@ -11,78 +14,115 @@ st.set_page_config(
 
 login()
 
-st.title("📈 " + APP_NAME)
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-st.markdown(
-"""
-### AI Powered Trading Dashboard
-Multi-market scanner • Risk tools • Analytics
-"""
+st.sidebar.title("SLIMMY SIGNALS")
+
+menu = st.sidebar.radio(
+    "Navigation",
+    [
+        "Dashboard",
+        "Analytics",
+        "History"
+    ]
 )
 
-col1, col2 = st.columns(2)
+watchlist = st.sidebar.multiselect(
+    "Watchlist",
+    MARKETS,
+    default=["EUR/USD","XAU/USD"]
+)
 
-with col1:
+st.title("📈 " + APP_NAME)
 
-    market = st.selectbox(
-        "Select Market",
-        MARKETS
-    )
+col1,col2,col3 = st.columns(3)
 
-with col2:
+col1.metric(
+    "Markets",
+    len(MARKETS)
+)
 
-    timeframe = st.selectbox(
-        "Timeframe",
-        ["M5","M15","H1","H4"]
-    )
+col2.metric(
+    "Watchlist",
+    len(watchlist)
+)
 
-if st.button("Generate Signal"):
+col3.metric(
+    "Signals Today",
+    len(st.session_state.history)
+)
+
+market = st.selectbox(
+    "Market",
+    MARKETS
+)
+
+timeframe = st.selectbox(
+    "Timeframe",
+    ["M5","M15","H1","H4"]
+)
+
+if st.button("Generate Professional Signal"):
 
     result = generate_signal()
 
-    c1, c2, c3, c4 = st.columns(4)
+    confidence_color = "🟢"
 
-    c1.metric(
-        "SIGNAL",
-        result["signal"]
+    if result["confidence"] < 60:
+        confidence_color = "🟡"
+
+    if result["confidence"] < 57:
+        confidence_color = "🔴"
+
+    st.success(
+        f"{result['signal']} | {confidence_color} {result['confidence']}%"
     )
 
-    c2.metric(
-        "CONFIDENCE",
-        str(result["confidence"])+"%"
+    signal_data = {
+
+        "time": datetime.now().strftime("%H:%M"),
+
+        "market": market,
+
+        "timeframe": timeframe,
+
+        "signal": result["signal"],
+
+        "confidence": result["confidence"],
+
+        "tp": result["tp"],
+
+        "sl": result["sl"]
+
+    }
+
+    st.session_state.history.append(
+        signal_data
     )
 
-    c3.metric(
-        "TP",
-        result["tp"]
+if menu == "History":
+
+    st.subheader(
+        "Signal History"
     )
 
-    c4.metric(
-        "SL",
-        result["sl"]
+    st.dataframe(
+        pd.DataFrame(
+            st.session_state.history
+        )
     )
 
-st.divider()
+elif menu == "Analytics":
 
-st.subheader("Risk Calculator")
+    st.subheader(
+        "Analytics"
+    )
 
-balance = st.number_input(
-    "Account Balance",
-    value=100
-)
-
-risk = st.slider(
-    "Risk %",
-    1,
-    10,
-    2
-)
-
-risk_amount = balance * (risk/100)
-
-st.success(
-    f"Risk Amount: {risk_amount}"
-)
+    st.write(
+        "Signals generated:",
+        len(st.session_state.history)
+    )
 
 st.divider()
 
@@ -91,20 +131,9 @@ st.subheader(
 )
 
 st.text_area(
-    "Write notes here"
-)
-
-st.sidebar.title(
-    "Slimmy Signals"
+    "Write notes"
 )
 
 st.sidebar.success(
-    "Cloud Bot Active"
-)
-
-st.sidebar.write(
-"""
-Version 1.0
-Professional Edition
-"""
+    "Cloud Bot Running"
 )
