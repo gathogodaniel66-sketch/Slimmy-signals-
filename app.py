@@ -5,47 +5,84 @@ from config import APP_NAME, MARKETS
 
 st.set_page_config(
     page_title=APP_NAME,
+    page_icon="📈",
     layout="wide"
 )
 
 login()
 
-st.title(APP_NAME)
+st.title("📈 " + APP_NAME)
 
-st.subheader(
-    "Professional Trading Dashboard"
+st.markdown(
+"""
+### AI Powered Trading Dashboard
+Multi-market scanner • Risk tools • Analytics
+"""
 )
 
-market = st.selectbox(
-    "Choose Market",
-    MARKETS
-)
+col1, col2 = st.columns(2)
 
-if st.button(
-    "Generate Signal"
-):
+with col1:
+
+    market = st.selectbox(
+        "Select Market",
+        MARKETS
+    )
+
+with col2:
+
+    timeframe = st.selectbox(
+        "Timeframe",
+        ["M5","M15","H1","H4"]
+    )
+
+if st.button("Generate Signal"):
 
     result = generate_signal()
 
-    st.metric(
-        "Signal",
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric(
+        "SIGNAL",
         result["signal"]
     )
 
-    st.metric(
-        "Confidence %",
-        result["confidence"]
+    c2.metric(
+        "CONFIDENCE",
+        str(result["confidence"])+"%"
     )
 
-    st.metric(
-        "Take Profit",
+    c3.metric(
+        "TP",
         result["tp"]
     )
 
-    st.metric(
-        "Stop Loss",
+    c4.metric(
+        "SL",
         result["sl"]
     )
+
+st.divider()
+
+st.subheader("Risk Calculator")
+
+balance = st.number_input(
+    "Account Balance",
+    value=100
+)
+
+risk = st.slider(
+    "Risk %",
+    1,
+    10,
+    2
+)
+
+risk_amount = balance * (risk/100)
+
+st.success(
+    f"Risk Amount: {risk_amount}"
+)
 
 st.divider()
 
@@ -53,7 +90,7 @@ st.subheader(
     "Trading Notes"
 )
 
-notes = st.text_area(
+st.text_area(
     "Write notes here"
 )
 
@@ -62,5 +99,12 @@ st.sidebar.title(
 )
 
 st.sidebar.success(
-    "Cloud Bot Running"
+    "Cloud Bot Active"
+)
+
+st.sidebar.write(
+"""
+Version 1.0
+Professional Edition
+"""
 )
