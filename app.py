@@ -15,15 +15,8 @@ st.set_page_config(
 login()
 
 # ---------------- CONFIG & API SETUP ---------------- #
-# Pull securely from hidden environment variables
-if "TWELVEDATA_API_KEY" in st.secrets:
-    TWELVEDATA_API_KEY = st.secrets["TWELVEDATA_API_KEY"]
-else:
-    # Local fallback for debugging or manual sidebar override
-    TWELVEDATA_API_KEY = st.sidebar.text_input("97e8ab17948f4772a17cb7dd4f8a6471", type="password", value="")
+TWELVEDATA_API_KEY = "97e8ab17948f4772a17cb7dd4f8a6471"
 
-
-# Track background execution loop status
 if "run_live_updates" not in st.session_state:
     st.session_state.run_live_updates = True
 
@@ -31,108 +24,107 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 if "price_history" not in st.session_state:
-    # Initialize dictionary to store rolling price points for charts
     st.session_state.price_history = {market: [100.0] for market in MARKETS}
 
 # ---------------- DATA FETCHING (TWELVEDATA) ---------------- #
 def fetch_live_price(symbol, api_key):
-    """
-    Fetches real-time price from TwelveData API.
-    Handles standard symbols (e.g., AAPL, BTC/USD, EUR/USD).
-    """
-    if api_key == "demo" or not api_key:
-        # Fallback dummy logic if api key isn't provided yet
-        last_price = st.session_state.price_history[symbol][-1]
-        import random
-        return round(last_price * random.uniform(0.99, 1.01), 2)
-        
     url = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={api_key}"
     try:
         response = requests.get(url).json()
         if "price" in response:
             return float(response["price"])
         else:
-            st.sidebar.error(f"API Error ({symbol}): {response.get('message', 'Unknown Error')}")
             return st.session_state.price_history[symbol][-1]
-    except Exception as e:
+    except Exception:
         return st.session_state.price_history[symbol][-1]
 
 # ---------------- TRADING SIGNAL LOGIC ---------------- #
 def calculate_signal_logic(price_series):
-    """
-    Processes price trends using a basic Moving Average cross approximation.
-    Returns: Strategy Action (BUY/SELL/HOLD) and a Mock Confidence score.
-    """
     if len(price_series) < 3:
-        return "HOLD", 50
+        return "HOLD", 50, 85
         
-    # Calculate a mini short-term vs long-term momentum index
     current_price = price_series[-1]
     avg_price = sum(price_series) / len(price_series)
-    
-    # Calculate simple dynamic accuracy bounds for layout display
     accuracy = min(95, max(80, int(85 + (current_price % 10))))
 
-    if current_price > avg_price * 1.002:
+    if current_price > avg_price * 1.001:
         return "BUY", int(75 + (current_price % 20)), accuracy
-    elif current_price < avg_price * 0.998:
+    elif current_price < avg_price * 0.999:
         return "SELL", int(75 + (current_price % 20)), accuracy
     else:
         return "HOLD", 60, accuracy
 
 # ----------------- BACKGROUND REFRESH PIPELINE ----------------- #
-# Automatically update price indexes and metrics across selected core structures
 selected_market = st.sidebar.selectbox("Active Stream Target", MARKETS, index=0)
-
 current_live_price = fetch_live_price(selected_market, TWELVEDATA_API_KEY)
 
-# Append live data to track price series history (capped at 30 items)
+if selected_market not in st.session_state.price_history:
+    st.session_state.price_history[selected_market] = [current_live_price]
+    
 st.session_state.price_history[selected_market].append(current_live_price)
 if len(st.session_state.price_history[selected_market]) > 30:
     st.session_state.price_history[selected_market].pop(0)
 
-# Extract trend conditions dynamically
 trend_action, confidence_score, historical_accuracy = calculate_signal_logic(st.session_state.price_history[selected_market])
 
 
-# ---------------- CUSTOM CSS STYLE ---------------- #
+# ---------- MOBILE APP DOWNLOAD & STYLE INJECTION ---------- #
 st.markdown("""
 <style>
-.stApp {
-    background: #08111F;
-    color: white;
-}
-section[data-testid="stSidebar"] {
-    background: #111827;
-}
+.stApp { background: #08111F; color: white; }
+section[data-testid="stSidebar"] { background: #111827; }
 [data-testid="stMetric"] {
-    background: #131E30;
-    padding: 20px;
-    border-radius: 16px;
-    border: 1px solid #24324A;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: #131E30; padding: 20px; border-radius: 16px;
+    border: 1px solid #24324A; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-.bento-status-live {
-    color: #4ADE80;
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-.micro-text {
-    font-size: 0.8rem;
-    color: #9CA3AF;
-}
+.bento-status-live { color: #4ADE80; font-weight: bold; font-size: 1.2rem; }
+.micro-text { font-size: 0.8rem; color: #9CA3AF; }
 </style>
+
+<script>
+// Mobile PWA Meta Tag Setup for iOS and Android web app inclusion
+const metaAppleCapable = document.createElement('meta');
+metaAppleCapable.name = "apple-mobile-web-app-capable";
+metaAppleCapable.content = "yes";
+document.getElementsByTagName('head')[0].appendChild(metaAppleCapable);
+
+const metaAppleStatus = document.createElement('meta');
+metaAppleStatus.name = "apple-mobile-web-app-status-bar-style";
+metaAppleStatus.content = "black-translucent";
+document.getElementsByTagName('head')[0].appendChild(metaAppleStatus);
+
+const webManifest = document.createElement('link');
+webManifest.rel = "manifest";
+webManifest.href = "data:application/manifest+json," + JSON.stringify({
+    "short_name": "SlimmySignals",
+    "name": "Slimmy Signals Dashboard",
+    "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/4238/4238090.png", "type": "image/png", "sizes": "512x512"}],
+    "start_url": ".",
+    "background_color": "#08111F",
+    "theme_color": "#08111F",
+    "display": "standalone",
+    "orientation": "portrait"
+});
+document.getElementsByTagName('head')[0].appendChild(webManifest);
+</script>
 """, unsafe_allow_html=True)
 
 
 # ---------------- SIDEBAR NAVIGATION ---------------- #
 st.sidebar.title("📊 SLIMMY SIGNALS")
 page = st.sidebar.radio("Navigation", ["Dashboard", "History", "Analytics"])
-st.sidebar.checkbox("Live Refresh", value=True, key="run_live_updates")
+st.sidebar.checkbox("Live Refresh Loop", value=True, key="run_live_updates")
 
 # ---------------- HEADER ---------------- #
 st.title(APP_NAME)
 st.caption("Professional Multi Market Dashboard — Powered by TwelveData API")
+
+# App Download Instruction Card for Mobile Users
+with st.expander("📲 How to install this on your phone/desktop"):
+    st.markdown("""
+    * **On iPhone (Safari):** Tap the **Share** button (square with arrow up) at the bottom of your screen, scroll down, and select **Add to Home Screen**.
+    * **On Android (Chrome):** Tap the **3 vertical dots** menu icon in the upper right corner and select **Install App** or **Add to Home screen**.
+    """)
 
 # ---------------- KPI BENTO GRID (ROW 1) ---------------- #
 k_col1, k_col2, k_col3 = st.columns([2, 1, 1])
@@ -196,7 +188,7 @@ with top_left:
 with top_right:
     with st.container(border=True):
         st.markdown("**Watchlist Monitor**")
-        st.caption("⚡ Fixed Asset Base")
+        st.caption("⚡ Target Assets")
         for m in MARKETS[:4]:
             st.write(f"🔹 {m}")
 
@@ -227,7 +219,6 @@ with st.container(border=True):
     st.caption("Click to formalize the mathematical calculation below into your logging history system.")
     
     if st.button("Commit Computed Signal to History", use_container_width=True):
-        # Calculate execution parameters
         target_sl = round(current_live_price * 0.98, 2) if trend_action == "BUY" else round(current_live_price * 1.02, 2)
         target_tp = round(current_live_price * 1.05, 2) if trend_action == "BUY" else round(current_live_price * 0.95, 2)
         
@@ -270,5 +261,5 @@ with right:
 
 # ---------------- AUTOMATIC APP RERUN LOOP ---------------- #
 if st.session_state.run_live_updates:
-    time.sleep(3)  # Refresh app state every 3 seconds to pull live ticks from TwelveData API without hitting rate limits
+    time.sleep(4)  
     st.rerun()
