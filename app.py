@@ -1,360 +1,245 @@
 import streamlit as st
 import pandas as pd
 import random
-from datetime import datetime
 from scanner import generate_signal
 from auth import login
 from config import APP_NAME, MARKETS
 
 st.set_page_config(
-    page_title=APP_NAME,
-    page_icon="📈",
-    layout="wide"
+    layout="wide",
+    page_title=APP_NAME
 )
 
 login()
-
-# ---------------- STYLE ---------------- #
 
 st.markdown("""
 
 <style>
 
 .stApp{
-background:#08111F;
+background:linear-gradient(
+180deg,
+#07101D,
+#081A32
+);
 color:white;
 }
 
-section[data-testid="stSidebar"]{
-background:#111827;
+.card{
+
+background:rgba(18,26,45,0.9);
+
+border:1px solid rgba(
+255,255,255,0.08
+);
+
+border-radius:28px;
+
+padding:25px;
+
+box-shadow:
+0 0 30px rgba(
+0,120,255,.08
+);
+
+margin-bottom:18px;
+
 }
 
-[data-testid="stMetric"]{
-background:#131E30;
-padding:15px;
-border-radius:14px;
-border:1px solid #24324A;
+.big-text{
+
+font-size:60px;
+font-weight:bold;
+
 }
 
-.block{
-background:#131E30;
-padding:18px;
-border-radius:16px;
-border:1px solid #24324A;
-margin-bottom:12px;
-}
+.small{
 
-.big{
-padding:20px;
-border-radius:20px;
-background:#131E30;
-border:1px solid #24324A;
+opacity:.7;
+
+font-size:14px;
+
 }
 
 </style>
 
-""", unsafe_allow_html=True)
-
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-# ---------------- SIDEBAR ---------------- #
-
-st.sidebar.title("📊 SLIMMY SIGNALS")
-
-page = st.sidebar.radio(
-
-"Navigation",
-
-[
-"Dashboard",
-"History",
-"Analytics"
-
-]
-
-)
-
-# ---------------- HEADER ---------------- #
-
-st.title(APP_NAME)
+""",unsafe_allow_html=True)
 
 st.caption(
 "Professional Multi Market Dashboard"
 )
 
-# ---------------- KPI CARDS ---------------- #
+# HERO GRID
 
-k1,k2 = st.columns(2)
-
-with k1:
-    st.metric(
-        "Markets",
-        len(MARKETS)
-    )
-
-with k2:
-    st.metric(
-        "Signals",
-        len(st.session_state.history)
-    )
-
-k3,k4 = st.columns(2)
-
-with k3:
-    st.metric(
-        "Accuracy",
-        f"{random.randint(80,95)}%"
-    )
-
-with k4:
-    st.metric(
-        "Status",
-        "LIVE"
-    )
-
-st.divider()
-
-# ==================================================
-# TRUE MOBILE BENTO
-# ==================================================
-
-top_left, top_right = st.columns([4,1])
-
-with top_left:
-
-    with st.container(border=True):
-
-        st.subheader(
-        "Market Overview"
-        )
-
-        chart = pd.DataFrame({
-
-        "Price":[
-
-        100,
-        104,
-        103,
-        108,
-        110,
-        111,
-        116,
-        115,
-        120
-
-        ]
-
-        })
-
-        st.line_chart(chart)
-
-with top_right:
-
-    with st.container(border=True):
-
-        st.write(
-        "Watchlist"
-        )
-
-        st.write(
-        "EUR/USD"
-        )
-
-        st.write(
-        "XAU/USD"
-        )
-
-    with st.container(border=True):
-
-        st.write(
-        "Sessions"
-        )
-
-        st.success(
-        "London"
-        )
-
-        st.info(
-        "NY"
-        )
-
-st.divider()
-
-# SECOND GRID
-
-a,b,c = st.columns([2,1,1])
-
-with a:
-
-    with st.container(border=True):
-
-        market = st.selectbox(
-
-        "Market",
-
-        MARKETS
-
-        )
-
-        timeframe = st.selectbox(
-
-        "Timeframe",
-
-        [
-
-        "M5",
-        "M15",
-        "H1",
-        "H4"
-
-        ]
-
-        )
-
-with b:
-
-    with st.container(border=True):
-
-        st.metric(
-
-        "Confidence",
-
-        f"{random.randint(70,96)}%"
-
-        )
-
-with c:
-
-    with st.container(border=True):
-
-        st.metric(
-
-        "Trend",
-
-        random.choice(
-
-        [
-
-        "BUY",
-        "SELL"
-
-        ]
-
-        )
-
-        )
-
-st.divider()
-
-# LARGE SIGNAL CARD
-
-with st.container(border=True):
-
-    st.subheader(
-    "Signal Center"
-    )
-
-    if st.button(
-    "Generate Signal"
-    ):
-
-        signal = generate_signal()
-
-        st.success(
-
-        f"""
-
-Signal: {signal["signal"]}
-
-Confidence: {signal["confidence"]}%
-
-TP: {signal["tp"]}
-
-SL: {signal["sl"]}
-
-Market: {market}
-
-Timeframe: {timeframe}
-
-        """
-
-        )
-
-        st.session_state.history.append({
-
-        "time":datetime.now(),
-
-        "market":market,
-
-        "signal":signal["signal"],
-
-        "confidence":signal["confidence"]
-
-        })
-
-st.divider()
-
-# LOWER BENTO
-
-left,right = st.columns([3,1])
+left,right = st.columns([2,1])
 
 with left:
 
-    with st.container(border=True):
+    st.markdown("""
 
-        st.subheader(
-        "History"
-        )
+<div class="card">
 
-        st.dataframe(
+STATUS & PRICE
 
-        pd.DataFrame(
+<br><br>
 
-        st.session_state.history
+<div class="small">
+STATUS:
+</div>
 
-        ),
+<div class="big-text">
 
-        use_container_width=True
+LIVE
 
-        )
+</div>
+
+</div>
+
+""",unsafe_allow_html=True)
 
 with right:
 
-    with st.container(border=True):
+    st.markdown(f"""
 
-        st.subheader(
-        "Analytics"
-        )
+<div class="card">
 
-        if len(
-        st.session_state.history
-        ) > 0:
+ACCURACY
 
-            df = pd.DataFrame(
+<br><br>
 
-            st.session_state.history
+<div class="big-text">
 
-            )
+{random.randint(80,95)}%
 
-            st.bar_chart(
+</div>
 
-            df["confidence"]
+</div>
 
-            )
+""",unsafe_allow_html=True)
+
+# SECOND ROW
+
+a,b,c = st.columns(3)
+
+with a:
+
+    st.markdown(f"""
+
+<div class="card">
+
+MARKETS
+
+<div class="big-text">
+
+{len(MARKETS)}
+
+</div>
+
+</div>
+
+""",unsafe_allow_html=True)
+
+with b:
+
+    st.markdown("""
+
+<div class="card">
+
+SIGNALS
+
+<div class="big-text">
+
+0
+
+</div>
+
+</div>
+
+""",unsafe_allow_html=True)
+
+with c:
+
+    st.markdown("""
+
+<div class="card">
+
+SUBSCRIPTION PLAN
+
+<br>
+
+PROFESSIONAL
+
+</div>
+
+""",unsafe_allow_html=True)
+
+# LARGE PANEL
+
+st.markdown("""
+
+<div class="card">
+
+<h1>
+
+Market Overview
+
+</h1>
+
+</div>
+
+""",unsafe_allow_html=True)
+
+chart = pd.DataFrame({
+
+"Price":[
+
+100,
+102,
+105,
+107,
+109,
+112,
+115,
+114,
+118
+
+]
+
+})
+
+st.line_chart(
+chart,
+height=400
+)
 
 st.divider()
 
-with st.container(border=True):
+market = st.selectbox(
 
-    st.subheader(
-    "Trading Notes"
-    )
+"Market",
 
-    st.text_area(
+MARKETS
 
-    "",
+)
 
-    height=160
+if st.button(
+"Generate Signal"
+):
+
+    signal = generate_signal()
+
+    st.success(
+
+    f"""
+
+Signal:
+
+{signal["signal"]}
+
+Confidence:
+
+{signal["confidence"]}%
+
+    """
 
     )
