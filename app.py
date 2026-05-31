@@ -14,14 +14,14 @@ st.set_page_config(
 
 login()
 
-# ---------------- STYLING ---------------- #
+# ---------------- STYLE ---------------- #
 
 st.markdown("""
 
 <style>
 
 .stApp{
-background-color:#0B1220;
+background:#0B1220;
 color:white;
 }
 
@@ -29,37 +29,45 @@ section[data-testid="stSidebar"]{
 background:#111827;
 }
 
-.card{
+.block{
 background:#151D2E;
 padding:20px;
-border-radius:15px;
-border:1px solid #28344F;
-margin:5px;
+border-radius:18px;
+border:1px solid #26344F;
+margin-bottom:15px;
 }
 
-.signal-card{
+.bigblock{
 background:#151D2E;
 padding:25px;
 border-radius:18px;
-border:1px solid #2E3A59;
+border:1px solid #26344F;
+min-height:420px;
 }
 
-h1,h2,h3{
-color:white;
+.smallblock{
+background:#151D2E;
+padding:18px;
+border-radius:18px;
+border:1px solid #26344F;
+min-height:180px;
+}
+
+.signal{
+background:#1A2335;
+padding:25px;
+border-radius:18px;
+border:1px solid #344766;
 }
 
 </style>
 
 """, unsafe_allow_html=True)
 
-# ---------------- STORAGE ---------------- #
-
 if "history" not in st.session_state:
-    st.session_state.history = []
+    st.session_state.history=[]
 
-# ---------------- SIDEBAR ---------------- #
-
-st.sidebar.title("📊 SLIMMY SIGNALS")
+st.sidebar.title("📊 KIHATOS SIGNALS")
 
 page = st.sidebar.radio(
 
@@ -67,164 +75,190 @@ page = st.sidebar.radio(
 
 [
 "Dashboard",
-"Signals",
-"Analytics",
 "History",
+"Analytics",
 "Settings"
 
 ]
 
 )
 
-st.sidebar.write("Status: 🟢 LIVE")
+# -------- TOP KPIs -------- #
 
-# ---------------- HEADER ---------------- #
+k1,k2,k3,k4 = st.columns(4)
 
-st.title(APP_NAME)
-
-st.caption(
-"Professional Multi-Market Trading Dashboard"
+k1.metric(
+"Markets",
+len(MARKETS)
 )
 
-# ---------------- TOP METRICS ---------------- #
+k2.metric(
+"Signals",
+len(st.session_state.history)
+)
 
-m1,m2,m3,m4 = st.columns(4)
+k3.metric(
+"Accuracy",
+f"{random.randint(78,96)}%"
+)
 
-with m1:
-    st.metric(
-        "Markets",
-        len(MARKETS)
-    )
-
-with m2:
-    st.metric(
-        "Signals",
-        len(st.session_state.history)
-    )
-
-with m3:
-    st.metric(
-        "Confidence",
-        f"{random.randint(78,96)}%"
-    )
-
-with m4:
-    st.metric(
-        "System",
-        "ONLINE"
-    )
+k4.metric(
+"Status",
+"LIVE"
+)
 
 st.divider()
 
-# ---------------- MARKET AREA ---------------- #
+# =================================
+# TRUE BENTO GRID
+# =================================
 
-left,middle,right = st.columns([2,1,1])
+left,right = st.columns([3,1])
+
+# BIG PANEL
 
 with left:
 
-    st.subheader(
-        "Market Performance"
+    st.markdown(
+    "### Market Overview"
     )
 
-    chart_data = pd.DataFrame({
+    prices = pd.DataFrame({
 
-        "Price":[
+    "Price":[
 
-            100,
-            103,
-            105,
-            101,
-            108,
-            111,
-            115,
-            118
+    100,
+    102,
+    105,
+    104,
+    108,
+    112,
+    115,
+    118,
+    117,
+    121
 
-        ]
+    ]
 
     })
 
     st.line_chart(
-        chart_data
+    prices
     )
 
-with middle:
+# STACKED RIGHT CARDS
 
-    st.subheader(
-        "Watchlist"
+with right:
+
+    st.markdown(
+    "### Watchlist"
     )
 
     watch = st.multiselect(
 
-        "",
+    "",
 
-        MARKETS,
+    MARKETS,
 
-        default=[
+    default=[
 
-            "EUR/USD",
-            "XAU/USD"
+    "EUR/USD",
 
-        ]
+    "XAU/USD"
+
+    ]
 
     )
 
-    st.write(watch)
-
-with right:
-
-    st.subheader(
-        "Sessions"
+    st.markdown(
+    "### Sessions"
     )
 
     st.success(
-        "London Open"
+    "London"
     )
 
     st.info(
-        "New York Active"
+    "New York"
     )
 
     st.warning(
-        "Asia Waiting"
+    "Asia"
     )
 
 st.divider()
 
-# ---------------- SIGNAL AREA ---------------- #
+# SECOND BENTO ROW
 
-c1,c2 = st.columns(2)
+r1,r2,r3 = st.columns([2,1,1])
 
-with c1:
+with r1:
 
     market = st.selectbox(
 
-        "Choose Market",
+    "Market",
 
-        MARKETS
+    MARKETS
 
     )
-
-with c2:
 
     timeframe = st.selectbox(
 
-        "Timeframe",
+    "Timeframe",
 
-        [
+    [
 
-            "M5",
-            "M15",
-            "H1",
-            "H4"
+    "M5",
+    "M15",
+    "H1",
+    "H4"
 
-        ]
+    ]
 
     )
 
+with r2:
+
+    st.metric(
+
+    "Confidence",
+
+    f"{random.randint(70,95)}%"
+
+    )
+
+with r3:
+
+    st.metric(
+
+    "Trend",
+
+    random.choice(
+
+    [
+
+    "BUY",
+
+    "SELL",
+
+    "NEUTRAL"
+
+    ]
+
+    )
+
+    )
+
+st.divider()
+
+# LARGE SIGNAL PANEL
+
+st.subheader(
+"Signal Center"
+)
+
 if st.button(
-
-    "Generate Professional Signal"
-
+"Generate Signal"
 ):
 
     signal = generate_signal()
@@ -233,19 +267,19 @@ if st.button(
 
     f"""
 
-    <div class='signal-card'>
+    <div class='signal'>
 
-    <h2>{signal['signal']}</h2>
+    <h2>{signal["signal"]}</h2>
 
-    <h3>Confidence: {signal['confidence']}%</h3>
+    <h3>Confidence: {signal["confidence"]}%</h3>
 
     <p>Market: {market}</p>
 
     <p>Timeframe: {timeframe}</p>
 
-    <p>Take Profit: {signal['tp']}</p>
+    <p>TP: {signal["tp"]}</p>
 
-    <p>Stop Loss: {signal['sl']}</p>
+    <p>SL: {signal["sl"]}</p>
 
     </div>
 
@@ -257,80 +291,62 @@ if st.button(
 
     st.session_state.history.append({
 
-        "time":datetime.now(),
+    "time":datetime.now(),
 
-        "market":market,
+    "market":market,
 
-        "signal":signal["signal"],
+    "signal":signal["signal"],
 
-        "confidence":signal["confidence"]
+    "confidence":signal["confidence"]
 
     })
 
-# ---------------- ANALYTICS ---------------- #
+# LOWER BENTO
 
-if page == "Analytics":
+bottom_left,bottom_right = st.columns([2,1])
+
+with bottom_left:
 
     st.subheader(
-        "Performance Analytics"
+    "History"
+    )
+
+    st.dataframe(
+
+    pd.DataFrame(
+
+    st.session_state.history
+
+    )
+
+    )
+
+with bottom_right:
+
+    st.subheader(
+    "Analytics"
     )
 
     if len(
-        st.session_state.history
+    st.session_state.history
     ) > 0:
 
         df = pd.DataFrame(
 
-            st.session_state.history
+        st.session_state.history
 
         )
 
         st.bar_chart(
 
-            df["confidence"]
+        df["confidence"]
 
         )
-
-# ---------------- HISTORY ---------------- #
-
-if page == "History":
-
-    st.subheader(
-        "Signal History"
-    )
-
-    st.dataframe(
-
-        pd.DataFrame(
-
-            st.session_state.history
-
-        )
-
-    )
-
-# ---------------- SETTINGS ---------------- #
-
-if page == "Settings":
-
-    st.subheader(
-        "Settings"
-    )
-
-    st.toggle(
-        "Enable Alerts"
-    )
-
-    st.toggle(
-        "Dark Mode"
-    )
-
-# ---------------- NOTES ---------------- #
-
-st.divider()
 
 st.text_area(
 
-    "Trading Journal"
+"Trading Journal",
+
+height=150
 
 )
