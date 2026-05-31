@@ -1,1 +1,11 @@
-# App configuration
+API_KEY = "YOUR_TWELVEDATA_KEY"
+
+APP_NAME = "KIHATOS SIGNALS"
+
+MARKETS = [
+    "EUR/USD",
+    "GBP/USD",
+    "USD/JPY",
+    "XAU/USD",
+    "BTC/USD"
+]
