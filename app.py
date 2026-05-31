@@ -1,245 +1,224 @@
 import streamlit as st
 import pandas as pd
 import random
+from datetime import datetime
 from scanner import generate_signal
 from auth import login
 from config import APP_NAME, MARKETS
 
 st.set_page_config(
-    layout="wide",
-    page_title=APP_NAME
+    page_title=APP_NAME,
+    page_icon="📈",
+    layout="wide"
 )
 
 login()
 
+# ---------------- STYLE ---------------- #
 st.markdown("""
-
 <style>
-
-.stApp{
-background:linear-gradient(
-180deg,
-#07101D,
-#081A32
-);
-color:white;
+.stApp {
+    background: #08111F;
+    color: white;
 }
 
-.card{
-
-background:rgba(18,26,45,0.9);
-
-border:1px solid rgba(
-255,255,255,0.08
-);
-
-border-radius:28px;
-
-padding:25px;
-
-box-shadow:
-0 0 30px rgba(
-0,120,255,.08
-);
-
-margin-bottom:18px;
-
+section[data-testid="stSidebar"] {
+    background: #111827;
 }
 
-.big-text{
-
-font-size:60px;
-font-weight:bold;
-
+/* Customizing Streamlit's default metric tiles for a sleek dark Bento look */
+[data-testid="stMetric"] {
+    background: #131E30;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #24324A;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.small{
-
-opacity:.7;
-
-font-size:14px;
-
+/* Custom container classes for varied Bento block sizes */
+.bento-block {
+    background: #131E30;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #24324A;
+    margin-bottom: 16px;
 }
 
+.bento-status-live {
+    color: #4ADE80;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.micro-text {
+    font-size: 0.8rem;
+    color: #9CA3AF;
+}
 </style>
+""", unsafe_allow_html=True)
 
-""",unsafe_allow_html=True)
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-st.caption(
-"Professional Multi Market Dashboard"
+# ---------------- SIDEBAR ---------------- #
+st.sidebar.title("📊 SLIMMY SIGNALS")
+page = st.sidebar.radio(
+    "Navigation",
+    ["Dashboard", "History", "Analytics"]
 )
 
-# HERO GRID
+# ---------------- HEADER ---------------- #
+st.title(APP_NAME)
+st.caption("Professional Multi Market Dashboard")
+
+# ---------------- KPI BENTO GRID (ROW 1) ---------------- #
+# We arrange this into a 3-column layout where the 'Status' block spans slightly wider to host extra micro-data
+k_col1, k_col2, k_col3 = st.columns([2, 1, 1])
+
+with k_col1:
+    # Combining Status & Price indicators into a larger Bento tile as seen in watermarked_img_873913139780230313.png
+    with st.container(border=True):
+        st.markdown("<p class='micro-text'>STATUS & PRICE</p>", unsafe_allow_html=True)
+        
+        # Internal columns inside the card block
+        status_left, status_right = st.columns([1, 1])
+        with status_left:
+            st.markdown("### STATUS:<br><span class='bento-status-live'>● LIVE</span>", unsafe_allow_html=True)
+        with status_right:
+            st.markdown(
+                """
+                <div style="background: #0B1320; padding: 10px; border-radius: 8px; border: 1px solid #1E293B;">
+                    <p class='micro-text' style='margin:0;'>index: <b>5</b></p>
+                    <p class='micro-text' style='margin:0;'>Price: <b>111</b></p>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+
+with k_col2:
+    st.metric(
+        label="Accuracy 📈",
+        value=f"{random.randint(80,95)}%",
+        delta="↑ High"
+    )
+
+with k_col3:
+    # We can place another subscription or tier metric next to it to complete the balanced grid row
+    with st.container(border=True):
+        st.markdown("<p class='micro-text'>SUBSCRIPTION PLAN</p>", unsafe_allow_html=True)
+        st.markdown("### PROFESSIONAL")
+        st.markdown("<span class='bento-status-live'>● Active</span>", unsafe_allow_html=True)
+
+
+# ---------------- KPI BENTO GRID (ROW 2) ---------------- #
+# Sub-metrics aligned tightly underneath the main data status blocks
+k_sub1, k_sub2, k_sub3 = st.columns([1, 1, 2])
+
+with k_sub1:
+    st.metric(
+        label="Markets 🎛️",
+        value=len(MARKETS)
+    )
+
+with k_sub2:
+    st.metric(
+        label="Signals 📡",
+        value=len(st.session_state.history)
+    )
+
+with k_sub3:
+    with st.container(border=True):
+        st.markdown("<p class='micro-text'>SESSION FOCUS</p>", unsafe_allow_html=True)
+        sess_1, sess_2 = st.columns(2)
+        sess_1.success("London Open")
+        sess_2.info("NY Session")
 
-left,right = st.columns([2,1])
-
-with left:
-
-    st.markdown("""
-
-<div class="card">
-
-STATUS & PRICE
-
-<br><br>
-
-<div class="small">
-STATUS:
-</div>
-
-<div class="big-text">
-
-LIVE
-
-</div>
-
-</div>
-
-""",unsafe_allow_html=True)
-
-with right:
-
-    st.markdown(f"""
-
-<div class="card">
-
-ACCURACY
-
-<br><br>
-
-<div class="big-text">
-
-{random.randint(80,95)}%
-
-</div>
-
-</div>
-
-""",unsafe_allow_html=True)
-
-# SECOND ROW
-
-a,b,c = st.columns(3)
-
-with a:
-
-    st.markdown(f"""
-
-<div class="card">
-
-MARKETS
-
-<div class="big-text">
-
-{len(MARKETS)}
-
-</div>
-
-</div>
-
-""",unsafe_allow_html=True)
-
-with b:
-
-    st.markdown("""
-
-<div class="card">
-
-SIGNALS
-
-<div class="big-text">
-
-0
-
-</div>
-
-</div>
-
-""",unsafe_allow_html=True)
-
-with c:
-
-    st.markdown("""
-
-<div class="card">
-
-SUBSCRIPTION PLAN
-
-<br>
-
-PROFESSIONAL
-
-</div>
-
-""",unsafe_allow_html=True)
-
-# LARGE PANEL
-
-st.markdown("""
-
-<div class="card">
-
-<h1>
-
-Market Overview
-
-</h1>
-
-</div>
-
-""",unsafe_allow_html=True)
-
-chart = pd.DataFrame({
-
-"Price":[
-
-100,
-102,
-105,
-107,
-109,
-112,
-115,
-114,
-118
-
-]
-
-})
-
-st.line_chart(
-chart,
-height=400
-)
 
 st.divider()
 
-market = st.selectbox(
+# ---------------- MARKET OVERVIEW BENTO (ROW 3) ---------------- #
+top_left, top_right = st.columns([3, 1])
 
-"Market",
+with top_left:
+    with st.container(border=True):
+        st.subheader("Market Overview")
+        chart = pd.DataFrame({
+            "Price": [100, 104, 103, 108, 110, 111, 116, 115, 120]
+        })
+        st.line_chart(chart, use_container_width=True)
 
-MARKETS
+with top_right:
+    with st.container(border=True):
+        st.markdown("**Watchlist**")
+        st.caption("⚡ Top Assets")
+        st.write("🔹 EUR/USD")
+        st.write("🔹 GBP/USD")
+        st.write("🔹 USD/JPY")
 
-)
+st.divider()
 
-if st.button(
-"Generate Signal"
-):
+# ---------------- SIGNAL GENERATOR GRID ---------------- #
+a, b, c = st.columns([2, 1, 1])
 
-    signal = generate_signal()
+with a:
+    with st.container(border=True):
+        market = st.selectbox("Market", MARKETS)
+        timeframe = st.selectbox("Timeframe", ["M5", "M15", "H1", "H4"])
 
-    st.success(
+with b:
+    with st.container(border=True):
+        st.metric("Confidence", f"{random.randint(70,96)}%")
 
-    f"""
+with c:
+    with st.container(border=True):
+        st.metric("Trend", random.choice(["BUY", "SELL"]))
 
-Signal:
+st.divider()
 
-{signal["signal"]}
+# LARGE SIGNAL CARD
+with st.container(border=True):
+    st.subheader("Signal Center")
+    if st.button("Generate Signal", use_container_width=True):
+        signal = generate_signal()
+        st.success(
+            f"""
+            **Signal:** {signal["signal"]}  
+            **Confidence:** {signal["confidence"]}%  
+            **TP:** {signal["tp"]} | **SL:** {signal["sl"]}  
+            **Market:** {market} | **Timeframe:** {timeframe}
+            """
+        )
+        st.session_state.history.append({
+            "time": datetime.now(),
+            "market": market,
+            "signal": signal["signal"],
+            "confidence": signal["confidence"]
+        })
 
-Confidence:
+st.divider()
 
-{signal["confidence"]}%
+# LOWER BENTO (HISTORY & ANALYTICS)
+left, right = st.columns([2, 1])
 
-    """
+with left:
+    with st.container(border=True):
+        st.subheader("History")
+        st.dataframe(
+            pd.DataFrame(st.session_state.history),
+            use_container_width=True
+        )
 
-    )
+with right:
+    with st.container(border=True):
+        st.subheader("Analytics")
+        if len(st.session_state.history) > 0:
+            df = pd.DataFrame(st.session_state.history)
+            st.bar_chart(df["confidence"])
+        else:
+            st.info("No signal data available yet.")
+
+st.divider()
+
+with st.container(border=True):
+    st.subheader("Trading Notes")
+    st.text_area("", height=120, placeholder="Write down structural key zones or thoughts...")
