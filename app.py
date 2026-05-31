@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import random
 from datetime import datetime
 from scanner import generate_signal
 from auth import login
@@ -13,145 +14,140 @@ st.set_page_config(
 
 login()
 
+# ---------------- STYLING ---------------- #
+
 st.markdown("""
 
 <style>
 
-.main{
-background-color:#0E1117;
+.stApp{
+background-color:#0B1220;
 color:white;
 }
 
-.metric-box{
+section[data-testid="stSidebar"]{
+background:#111827;
+}
+
+.card{
+background:#151D2E;
 padding:20px;
-border-radius:12px;
-background:#1E1E1E;
-text-align:center;
+border-radius:15px;
+border:1px solid #28344F;
 margin:5px;
 }
 
 .signal-card{
-padding:20px;
-border-radius:15px;
-background:#161B22;
-border:1px solid #30363D;
+background:#151D2E;
+padding:25px;
+border-radius:18px;
+border:1px solid #2E3A59;
+}
+
+h1,h2,h3{
+color:white;
 }
 
 </style>
 
 """, unsafe_allow_html=True)
 
+# ---------------- STORAGE ---------------- #
+
 if "history" not in st.session_state:
-    st.session_state.history=[]
+    st.session_state.history = []
+
+# ---------------- SIDEBAR ---------------- #
 
 st.sidebar.title("📊 SLIMMY SIGNALS")
 
 page = st.sidebar.radio(
 
-"Menu",
+"Navigation",
 
 [
 "Dashboard",
+"Signals",
+"Analytics",
 "History",
-"Analytics"
+"Settings"
+
 ]
 
 )
 
+st.sidebar.write("Status: 🟢 LIVE")
+
+# ---------------- HEADER ---------------- #
+
 st.title(APP_NAME)
 
 st.caption(
-"Professional Multi Market Trading Dashboard"
+"Professional Multi-Market Trading Dashboard"
 )
 
-c1,c2,c3,c4 = st.columns(4)
+# ---------------- TOP METRICS ---------------- #
 
-with c1:
+m1,m2,m3,m4 = st.columns(4)
+
+with m1:
     st.metric(
         "Markets",
         len(MARKETS)
     )
 
-with c2:
+with m2:
     st.metric(
         "Signals",
         len(st.session_state.history)
     )
 
-with c3:
+with m3:
     st.metric(
-        "Status",
-        "LIVE"
+        "Confidence",
+        f"{random.randint(78,96)}%"
     )
 
-with c4:
+with m4:
     st.metric(
-        "Users",
-        "VIP"
+        "System",
+        "ONLINE"
     )
 
 st.divider()
 
-left,right = st.columns([2,1])
+# ---------------- MARKET AREA ---------------- #
+
+left,middle,right = st.columns([2,1,1])
 
 with left:
 
-    market = st.selectbox(
-        "Select Market",
-        MARKETS
+    st.subheader(
+        "Market Performance"
     )
 
-    timeframe = st.selectbox(
+    chart_data = pd.DataFrame({
 
-        "Timeframe",
+        "Price":[
 
-        ["M5","M15","H1","H4"]
+            100,
+            103,
+            105,
+            101,
+            108,
+            111,
+            115,
+            118
 
+        ]
+
+    })
+
+    st.line_chart(
+        chart_data
     )
 
-    if st.button(
-        "Generate Signal"
-    ):
-
-        signal = generate_signal()
-
-        st.markdown(
-
-        f"""
-
-        <div class="signal-card">
-
-        <h2>{signal["signal"]}</h2>
-
-        <h3>Confidence: {signal["confidence"]}%</h3>
-
-        <p>TP: {signal["tp"]}</p>
-
-        <p>SL: {signal["sl"]}</p>
-
-        <p>Market: {market}</p>
-
-        </div>
-
-        """,
-
-        unsafe_allow_html=True
-
-        )
-
-        st.session_state.history.append({
-
-            "time":datetime.now(),
-
-            "market":market,
-
-            "signal":signal["signal"],
-
-            "confidence":signal["confidence"]
-
-        })
-
-with right:
+with middle:
 
     st.subheader(
         "Watchlist"
@@ -163,13 +159,141 @@ with right:
 
         MARKETS,
 
-        default=["EUR/USD","XAU/USD"]
+        default=[
+
+            "EUR/USD",
+            "XAU/USD"
+
+        ]
 
     )
 
     st.write(watch)
 
-if page=="History":
+with right:
+
+    st.subheader(
+        "Sessions"
+    )
+
+    st.success(
+        "London Open"
+    )
+
+    st.info(
+        "New York Active"
+    )
+
+    st.warning(
+        "Asia Waiting"
+    )
+
+st.divider()
+
+# ---------------- SIGNAL AREA ---------------- #
+
+c1,c2 = st.columns(2)
+
+with c1:
+
+    market = st.selectbox(
+
+        "Choose Market",
+
+        MARKETS
+
+    )
+
+with c2:
+
+    timeframe = st.selectbox(
+
+        "Timeframe",
+
+        [
+
+            "M5",
+            "M15",
+            "H1",
+            "H4"
+
+        ]
+
+    )
+
+if st.button(
+
+    "Generate Professional Signal"
+
+):
+
+    signal = generate_signal()
+
+    st.markdown(
+
+    f"""
+
+    <div class='signal-card'>
+
+    <h2>{signal['signal']}</h2>
+
+    <h3>Confidence: {signal['confidence']}%</h3>
+
+    <p>Market: {market}</p>
+
+    <p>Timeframe: {timeframe}</p>
+
+    <p>Take Profit: {signal['tp']}</p>
+
+    <p>Stop Loss: {signal['sl']}</p>
+
+    </div>
+
+    """,
+
+    unsafe_allow_html=True
+
+    )
+
+    st.session_state.history.append({
+
+        "time":datetime.now(),
+
+        "market":market,
+
+        "signal":signal["signal"],
+
+        "confidence":signal["confidence"]
+
+    })
+
+# ---------------- ANALYTICS ---------------- #
+
+if page == "Analytics":
+
+    st.subheader(
+        "Performance Analytics"
+    )
+
+    if len(
+        st.session_state.history
+    ) > 0:
+
+        df = pd.DataFrame(
+
+            st.session_state.history
+
+        )
+
+        st.bar_chart(
+
+            df["confidence"]
+
+        )
+
+# ---------------- HISTORY ---------------- #
+
+if page == "History":
 
     st.subheader(
         "Signal History"
@@ -185,30 +309,28 @@ if page=="History":
 
     )
 
-if page=="Analytics":
+# ---------------- SETTINGS ---------------- #
+
+if page == "Settings":
 
     st.subheader(
-        "Analytics"
+        "Settings"
     )
 
-    st.bar_chart(
-
-        pd.DataFrame(
-
-            st.session_state.history
-
-        )["confidence"]
-
-        if len(st.session_state.history)>0
-
-        else []
-
+    st.toggle(
+        "Enable Alerts"
     )
+
+    st.toggle(
+        "Dark Mode"
+    )
+
+# ---------------- NOTES ---------------- #
 
 st.divider()
 
 st.text_area(
 
-"Trading Notes"
+    "Trading Journal"
 
 )
